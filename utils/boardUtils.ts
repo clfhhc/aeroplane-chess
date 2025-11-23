@@ -3,7 +3,7 @@ import { Coordinate, PlayerColor } from '../types';
 const COLOR_PATTERN = [PlayerColor.BLUE, PlayerColor.YELLOW, PlayerColor.RED, PlayerColor.GREEN];
 
 const generateTrack = (): Coordinate[] => {
-  const coords: {x: number, y: number}[] = [];
+  const coords: { x: number, y: number }[] = [];
 
   // 1. Left Arm Top (0,10) -> (3,10) [Right]
   for (let x = 0; x <= 3; x++) coords.push({ x, y: 10 });
@@ -42,7 +42,7 @@ export const TRACK_COORDS: Coordinate[] = generateTrack();
 export const getHomeCoordinates = (color: PlayerColor): Coordinate[] => {
   const center = { x: 7, y: 7, color: undefined };
   const path: Coordinate[] = [];
-  
+
   if (color === PlayerColor.YELLOW) {
     for (let x = 1; x <= 6; x++) path.push({ x, y: 7, color: PlayerColor.YELLOW });
   } else if (color === PlayerColor.GREEN) {
@@ -52,13 +52,13 @@ export const getHomeCoordinates = (color: PlayerColor): Coordinate[] => {
   } else if (color === PlayerColor.BLUE) {
     for (let y = 1; y <= 6; y++) path.push({ x: 7, y, color: PlayerColor.BLUE });
   }
-  
-  path.push(center); 
+
+  path.push(center);
   return path;
 };
 
 export const getLaunchCoordinate = (color: PlayerColor): Coordinate => {
-  switch(color) {
+  switch (color) {
     case PlayerColor.YELLOW: return { x: 0, y: 11 };
     case PlayerColor.RED: return { x: 11, y: 14 };
     case PlayerColor.BLUE: return { x: 3, y: 0 };
@@ -67,18 +67,18 @@ export const getLaunchCoordinate = (color: PlayerColor): Coordinate => {
 };
 
 export const getHangarZone = (color: PlayerColor) => {
-  switch(color) {
-    case PlayerColor.YELLOW: return { xMin: 0, xMax: 1, yMin: 13, yMax: 14 }; 
-    case PlayerColor.RED: return { xMin: 13, xMax: 14, yMin: 13, yMax: 14 }; 
-    case PlayerColor.GREEN: return { xMin: 13, xMax: 14, yMin: 0, yMax: 1 }; 
-    case PlayerColor.BLUE: return { xMin: 0, xMax: 1, yMin: 0, yMax: 1 }; 
+  switch (color) {
+    case PlayerColor.YELLOW: return { xMin: 1, xMax: 2, yMin: 12, yMax: 13 };
+    case PlayerColor.RED: return { xMin: 12, xMax: 13, yMin: 12, yMax: 13 };
+    case PlayerColor.GREEN: return { xMin: 12, xMax: 13, yMin: 1, yMax: 2 };
+    case PlayerColor.BLUE: return { xMin: 1, xMax: 2, yMin: 1, yMax: 2 };
   }
 };
 
 export const getShortcutPath = (color: PlayerColor): Coordinate[] => {
   const path: Coordinate[] = [];
   if (color === PlayerColor.GREEN) {
-    for (let y = 5; y <= 10; y++) path.push({ x: 3, y }); 
+    for (let y = 5; y <= 10; y++) path.push({ x: 3, y });
   }
   if (color === PlayerColor.BLUE) {
     for (let x = 5; x <= 10; x++) path.push({ x, y: 11 });
