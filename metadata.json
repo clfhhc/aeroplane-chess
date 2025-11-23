@@ -1,0 +1,5 @@
+{
+  "name": "Galactic Aeroplane Chess",
+  "description": "A modern, galaxy-themed implementation of the classic Aeroplane Chess board game with 2-4 player local support.",
+  "requestFramePermissions": []
+}
