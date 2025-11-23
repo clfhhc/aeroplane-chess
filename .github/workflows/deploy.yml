@@ -34,14 +34,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # WARNING: This exposes the key in the client bundle.
-          # Ensure this secret is set in your repo settings if you want it to work.
-          # If it's hardcoded in vite.config.ts via loadEnv, it needs to be available here.
-          # Based on vite.config.ts, it uses env.GEMINI_API_KEY.
-          # We need to pass it from repository secrets.
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
