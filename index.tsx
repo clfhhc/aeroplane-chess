@@ -1,6 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+// Import fonts
+import '@fontsource/orbitron/400.css';
+import '@fontsource/orbitron/700.css';
+import '@fontsource/rajdhani/400.css';
+import '@fontsource/rajdhani/600.css';
+import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
