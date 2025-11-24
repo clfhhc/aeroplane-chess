@@ -119,18 +119,18 @@ const GridCell = (props: GridCellProps) => {
                
                return (
                    <div 
-                      class={clsx("absolute w-full h-full flex items-center justify-center transition-all duration-500", idx() > 0 && "-translate-y-1 translate-x-1")} 
+                      class={clsx("absolute w-full h-full flex items-center justify-center transition-all duration-500", idx() > 0 && "-translate-y-1 translate-x-1", canMove() && "cursor-pointer")} 
                       style={{ "z-index": 20 + idx() }}
+                      onClick={(e) => {
+                          e?.stopPropagation();
+                          if(canMove()) gameActions.movePiece(p.id);
+                      }}
                    >
                       <Piece 
                           color={p.playerColor} 
                           isClickable={canMove()}
                           isHighlighted={p.id === gameStore.highlightedPieceId && p.playerColor === currentPlayer().color}
                           moveableLabel={canMove() ? (p.id + 1).toString() : null}
-                          onClick={(e) => {
-                              e?.stopPropagation();
-                              if(canMove()) gameActions.movePiece(p.id);
-                          }}
                           count={piecesHere().filter(ph => ph.playerColor === p.playerColor).length > 1 && idx() === 0 ? piecesHere().filter(ph => ph.playerColor === p.playerColor).length : 1}
                       />
                    </div>
@@ -182,13 +182,19 @@ const Hangar = (props: HangarProps) => {
     >
       <div class="w-full h-full grid grid-cols-2 grid-rows-2">
          <For each={[0, 1, 2, 3]}>
-             {(idx) => {
-                 const piece = () => basePieces()[idx];
+             {(slotId) => {
+                 const piece = () => basePieces().find(p => p.id === slotId);
                  const isMyPiece = () => currentPlayer()?.color === props.color;
                  const canLaunch = () => isMyPiece() && gameStore.diceValue === 6 && gameStore.turnState === 'moving';
 
                  return (
-                    <div class="flex items-center justify-center relative">
+                    <div 
+                       class={clsx("flex items-center justify-center relative", canLaunch() && "cursor-pointer")}
+                       onClick={(e) => {
+                           e?.stopPropagation();
+                           if(canLaunch() && piece()) gameActions.movePiece(piece()!.id);
+                       }}
+                    >
                        <Show when={piece()}>
                          <div class="w-full h-full flex items-center justify-center">
                            <Piece 
@@ -196,10 +202,6 @@ const Hangar = (props: HangarProps) => {
                              isClickable={canLaunch()} 
                              isHighlighted={piece()!.id === gameStore.highlightedPieceId && props.color === currentPlayer().color}
                              moveableLabel={canLaunch() ? (piece()!.id + 1).toString() : null}
-                             onClick={(e) => {
-                                 e?.stopPropagation();
-                                 if(canLaunch()) gameActions.movePiece(piece()!.id);
-                             }} 
                            />
                          </div>
                        </Show>

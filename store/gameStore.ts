@@ -111,17 +111,15 @@ export const gameActions = {
                             diceValue: null
                         });
                     });
-                }, 1500);
+                }, 800);
                 return;
             }
         }
 
         const canMove = currentPlayer.pieces.some(p => {
+            if (p.state === 'finished') return false;
             if (p.state === 'base') return roll === 6;
-            if (p.state === 'launched') return true;
-            if (p.state === 'active') return true;
-            if (p.state === 'home') return true;
-            return false;
+            return true; // launched, active, or home pieces can always move
         });
 
         const logText = roll === 6 && newConsecutiveSixes > 0
@@ -162,8 +160,6 @@ export const gameActions = {
     movePiece: (pieceId: number) => {
         if (!gameStore.diceValue || gameStore.turnState !== 'moving') return;
 
-        setGameStore('turnState', 'resolving');
-
         const newPlayers = JSON.parse(JSON.stringify(gameStore.players));
         const player = newPlayers[gameStore.currentPlayerIndex];
         const piece = player.pieces.find((p: Piece) => p.id === pieceId);
@@ -174,7 +170,6 @@ export const gameActions = {
         const isSix = gameStore.diceValue === 6;
         const diceValue = gameStore.diceValue;
 
-        // Movement logic (same as original)
         if (piece.state === 'base') {
             if (diceValue === 6) {
                 piece.state = 'launched';
@@ -416,14 +411,24 @@ export const gameActions = {
                 msg += " Bonus Roll!";
 
                 batch(() => {
-                    setGameStore('players', newPlayers);
-                    setGameStore('winner', null);
-                    setGameStore('turnState', 'rolling');
-                    setGameStore('diceValue', null);
-                    setGameStore('movedPieceIds', [...gameStore.movedPieceIds, pieceId]);
-                    setGameStore('turnId', Math.random().toString(36));
-                    setGameStore('logs', [{ turn: gameStore.logs.length + 1, text: msg, playerColor: player.color }, ...gameStore.logs]);
+                    setGameStore({
+                        players: newPlayers,
+                        turnState: 'resolving',
+                        movedPieceIds: [...gameStore.movedPieceIds, pieceId],
+                        logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: player.color }, ...gameStore.logs],
+                        highlightedPieceId: null
+                    });
                 });
+
+                setTimeout(() => {
+                    batch(() => {
+                        setGameStore({
+                            turnState: 'rolling',
+                            diceValue: null,
+                            turnId: Math.random().toString(36)
+                        });
+                    });
+                }, 500);
             } else {
                 const nextPlayerIndex = (gameStore.currentPlayerIndex + 1) % newPlayers.length;
 
@@ -447,7 +452,7 @@ export const gameActions = {
                             turnId: Math.random().toString(36)
                         });
                     });
-                }, 800);
+                }, 500);
             }
         }
     },
@@ -498,7 +503,7 @@ export const gameActions = {
                         turnId: Math.random().toString(36)
                     });
                 });
-            }, 800);
+            }, 500);
         }
     },
 
