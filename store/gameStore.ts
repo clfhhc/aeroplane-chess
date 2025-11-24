@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { createStore } from 'solid-js/store';
+import { batch } from 'solid-js';
 import { Player, PlayerColor, Piece, LogEntry } from '../types';
 import { PLAYER_ORDER, START_INDICES, GATEWAY_INDICES, TRACK_LENGTH, SHORTCUTS } from '../constants';
 import { TRACK_COORDS, getShortcutPath, getHomeCoordinates } from '../utils/boardUtils';
@@ -12,20 +13,12 @@ interface GameState {
     turnState: 'rolling' | 'moving' | 'resolving' | 'finished';
     logs: LogEntry[];
     highlightedPieceId: number | null;
-
     consecutiveSixes: number;
     movedPieceIds: number[];
-    turnId: string; // Unique ID for the current roll to prevent double-execution
-
-    startGame: (selectedColors: PlayerColor[]) => void;
-    rollDice: () => void;
-    movePiece: (pieceId: number) => void;
-    skipTurn: () => void;
-    resetGame: () => void;
-    setHighlightedPiece: (id: number | null) => void;
+    turnId: string;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
+const initialState: GameState = {
     gameStatus: 'setup',
     winner: null,
     players: [],
@@ -37,7 +30,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     consecutiveSixes: 0,
     movedPieceIds: [],
     turnId: '',
+};
 
+export const [gameStore, setGameStore] = createStore<GameState>(initialState);
+
+export const gameActions = {
     startGame: (selectedColors: PlayerColor[]) => {
         const sortedColors = PLAYER_ORDER.filter(c => selectedColors.includes(c));
 
@@ -45,42 +42,43 @@ export const useGameStore = create<GameState>((set, get) => ({
             id: idx,
             color,
             name: color.charAt(0).toUpperCase() + color.slice(1),
-            pieces: [0, 1, 2, 3].map((pid) => ({ id: pid, position: -1, state: 'base' })),
+            pieces: [0, 1, 2, 3].map((pid) => ({ id: pid, position: -1, state: 'base' as const })),
         }));
 
-        set({
-            gameStatus: 'playing',
-            winner: null,
-            players: newPlayers,
-            currentPlayerIndex: 0,
-            diceValue: null,
-            turnState: 'rolling',
-            consecutiveSixes: 0,
-            movedPieceIds: [],
-            turnId: Math.random().toString(36),
-            logs: [{ turn: 0, text: "Mission Started!", playerColor: sortedColors[0] }]
+        batch(() => {
+            setGameStore({
+                gameStatus: 'playing',
+                winner: null,
+                players: newPlayers,
+                currentPlayerIndex: 0,
+                diceValue: null,
+                turnState: 'rolling',
+                consecutiveSixes: 0,
+                movedPieceIds: [],
+                turnId: Math.random().toString(36),
+                logs: [{ turn: 0, text: "Mission Started!", playerColor: sortedColors[0] }]
+            });
         });
     },
 
-    setHighlightedPiece: (id) => set({ highlightedPieceId: id }),
+    setHighlightedPiece: (id: number | null) => {
+        setGameStore('highlightedPieceId', id);
+    },
 
     rollDice: () => {
-        const { turnState, currentPlayerIndex, players, consecutiveSixes, movedPieceIds } = get();
-
-        // STRICT LOCK: Only allow rolling if state is explicitly 'rolling'
-        if (turnState !== 'rolling') return;
+        if (gameStore.turnState !== 'rolling') return;
 
         const roll = Math.floor(Math.random() * 6) + 1;
-        const currentPlayer = players[currentPlayerIndex];
-        let newConsecutiveSixes = consecutiveSixes;
+        const currentPlayer = gameStore.players[gameStore.currentPlayerIndex];
+        let newConsecutiveSixes = gameStore.consecutiveSixes;
         const newTurnId = Math.random().toString(36);
 
         if (roll === 6) {
             newConsecutiveSixes += 1;
             if (newConsecutiveSixes === 3) {
-                const newPlayers = JSON.parse(JSON.stringify(players));
-                const activePlayer = newPlayers[currentPlayerIndex];
-                const uniqueMovedIds = [...new Set(movedPieceIds)];
+                const newPlayers = JSON.parse(JSON.stringify(gameStore.players));
+                const activePlayer = newPlayers[gameStore.currentPlayerIndex];
+                const uniqueMovedIds = [...new Set(gameStore.movedPieceIds)];
 
                 uniqueMovedIds.forEach((id: number) => {
                     const p = activePlayer.pieces.find((piece: Piece) => piece.id === id);
@@ -91,32 +89,31 @@ export const useGameStore = create<GameState>((set, get) => ({
                 });
 
                 const msg = "Three consecutive 6s! Engines overheated! Pieces returned to hangar.";
-                const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                const nextPlayerIndex = (gameStore.currentPlayerIndex + 1) % gameStore.players.length;
 
-                // Transition with delay to prevent confusion/accidental clicks
-                set({
-                    diceValue: roll,
-                    players: newPlayers,
-                    turnState: 'resolving', // Lock input
-                    consecutiveSixes: 0,
-                    movedPieceIds: [],
-                    turnId: newTurnId, // Invalidates previous turn
-                    logs: [{ turn: get().logs.length + 1, text: msg, playerColor: currentPlayer.color }, ...get().logs]
+                batch(() => {
+                    setGameStore({
+                        diceValue: roll,
+                        players: newPlayers,
+                        turnState: 'resolving',
+                        consecutiveSixes: 0,
+                        movedPieceIds: [],
+                        turnId: newTurnId,
+                        logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: currentPlayer.color }, ...gameStore.logs]
+                    });
                 });
 
                 setTimeout(() => {
-                    set({
-                        turnState: 'rolling',
-                        currentPlayerIndex: nextPlayerIndex,
-                        diceValue: null
+                    batch(() => {
+                        setGameStore({
+                            turnState: 'rolling',
+                            currentPlayerIndex: nextPlayerIndex,
+                            diceValue: null
+                        });
                     });
                 }, 1500);
                 return;
             }
-        } else {
-            // Reset streaks if not a 6 (though logic handles reset on turn change usually)
-            // Actually, streak persists *during* the turn if 6s are rolled. 
-            // If < 6, it's the last move of the turn anyway.
         }
 
         const canMove = currentPlayer.pieces.some(p => {
@@ -132,64 +129,61 @@ export const useGameStore = create<GameState>((set, get) => ({
             : `${currentPlayer.name} rolled ${roll}`;
 
         const newLogs = [
-            { turn: get().logs.length + 1, text: logText, playerColor: currentPlayer.color },
-            ...get().logs
+            { turn: gameStore.logs.length + 1, text: logText, playerColor: currentPlayer.color },
+            ...gameStore.logs
         ];
 
-        // If can't move, lock UI in 'resolving' then auto-skip
         if (!canMove) {
-            set({
-                diceValue: roll,
-                logs: newLogs,
-                consecutiveSixes: newConsecutiveSixes,
-                turnState: 'resolving',
-                turnId: newTurnId
+            batch(() => {
+                setGameStore({
+                    diceValue: roll,
+                    logs: newLogs,
+                    consecutiveSixes: newConsecutiveSixes,
+                    turnState: 'resolving',
+                    turnId: newTurnId
+                });
             });
             setTimeout(() => {
-                get().skipTurn();
+                gameActions.skipTurn();
             }, 1000);
         } else {
-            set({
-                diceValue: roll,
-                logs: newLogs,
-                consecutiveSixes: newConsecutiveSixes,
-                turnState: 'moving',
-                turnId: newTurnId
+            batch(() => {
+                setGameStore({
+                    diceValue: roll,
+                    logs: newLogs,
+                    consecutiveSixes: newConsecutiveSixes,
+                    turnState: 'moving',
+                    turnId: newTurnId
+                });
             });
         }
     },
 
     movePiece: (pieceId: number) => {
-        const { diceValue, currentPlayerIndex, players, logs, consecutiveSixes, movedPieceIds, turnId } = get();
+        if (!gameStore.diceValue || gameStore.turnState !== 'moving') return;
 
-        // CRITICAL FIX: Check turnState AND ensure diceValue exists.
-        // The turnId check isn't strictly necessary if state logic is perfect, but helps with race conditions.
-        if (!diceValue || get().turnState !== 'moving') return;
+        setGameStore('turnState', 'resolving');
 
-        // Invalidate turn immediately to prevent double-clicks on stacked pieces
-        set({ turnState: 'resolving' });
-
-        const newPlayers = JSON.parse(JSON.stringify(players));
-        const player = newPlayers[currentPlayerIndex];
+        const newPlayers = JSON.parse(JSON.stringify(gameStore.players));
+        const player = newPlayers[gameStore.currentPlayerIndex];
         const piece = player.pieces.find((p: Piece) => p.id === pieceId);
 
         if (!piece) return;
 
         let msg = "";
-        const isSix = diceValue === 6;
+        const isSix = gameStore.diceValue === 6;
+        const diceValue = gameStore.diceValue;
 
-        // --- MOVEMENT LOGIC ---
-        // 1. Launching
+        // Movement logic (same as original)
         if (piece.state === 'base') {
             if (diceValue === 6) {
                 piece.state = 'launched';
                 piece.position = -1;
                 msg = "Ready to Launch!";
             } else {
-                return; // Should not happen due to validation
+                return;
             }
         }
-        // 2. Launched -> Active
         else if (piece.state === 'launched') {
             const startIndex = START_INDICES[player.color];
             const targetIndex = (startIndex + diceValue - 1) % TRACK_LENGTH;
@@ -200,7 +194,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             let collision = false;
             newPlayers.forEach((p: Player, pIdx: number) => {
-                if (pIdx !== currentPlayerIndex) {
+                if (pIdx !== gameStore.currentPlayerIndex) {
                     p.pieces.forEach((enemy: Piece) => {
                         if (enemy.state === 'active' && enemy.position === piece.position) {
                             enemy.state = 'base';
@@ -218,9 +212,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     piece.position = (piece.position + 4) % TRACK_LENGTH;
                     msg += " + Jump!";
 
-                    // Check collision after jump
                     newPlayers.forEach((p: Player, pIdx: number) => {
-                        if (pIdx !== currentPlayerIndex) {
+                        if (pIdx !== gameStore.currentPlayerIndex) {
                             p.pieces.forEach((enemy: Piece) => {
                                 if (enemy.state === 'active' && enemy.position === piece.position) {
                                     enemy.state = 'base';
@@ -233,7 +226,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
         }
-        // 3. Active Track
         else if (piece.state === 'active') {
             const currentPos = piece.position;
             const gateway = GATEWAY_INDICES[player.color];
@@ -261,10 +253,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                 piece.position = (currentPos + diceValue) % TRACK_LENGTH;
                 msg = `Moved ${diceValue}.`;
 
-                // Collision Check 1
                 let collision = false;
                 newPlayers.forEach((p: Player, pIdx: number) => {
-                    if (pIdx !== currentPlayerIndex) {
+                    if (pIdx !== gameStore.currentPlayerIndex) {
                         p.pieces.forEach((enemy: Piece) => {
                             if (enemy.state === 'active' && enemy.position === piece.position) {
                                 enemy.state = 'base';
@@ -276,7 +267,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                     }
                 });
 
-                // Jump Logic (Only if NO collision)
                 if (!collision) {
                     const landedTile = TRACK_COORDS[piece.position];
                     const isGateway = piece.position === GATEWAY_INDICES[player.color];
@@ -286,7 +276,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                         if (piece.position === shortcut.start) {
                             const flyPath = getShortcutPath(player.color);
-                            // Collision on flight path
                             newPlayers.forEach((opp: Player) => {
                                 if (opp.id === player.id) return;
                                 const oppHomeCoords = getHomeCoordinates(opp.color);
@@ -307,9 +296,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                             piece.position = shortcut.end;
                             msg += " SHORTCUT!";
 
-                            // Collision after shortcut
                             newPlayers.forEach((p: Player, pIdx: number) => {
-                                if (pIdx !== currentPlayerIndex) {
+                                if (pIdx !== gameStore.currentPlayerIndex) {
                                     p.pieces.forEach((enemy: Piece) => {
                                         if (enemy.state === 'active' && enemy.position === piece.position) {
                                             enemy.state = 'base';
@@ -323,9 +311,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                             piece.position = (piece.position + 4) % TRACK_LENGTH;
                             msg += " Jumped +4!";
 
-                            // Collision after regular jump
                             newPlayers.forEach((p: Player, pIdx: number) => {
-                                if (pIdx !== currentPlayerIndex) {
+                                if (pIdx !== gameStore.currentPlayerIndex) {
                                     p.pieces.forEach((enemy: Piece) => {
                                         if (enemy.state === 'active' && enemy.position === piece.position) {
                                             enemy.state = 'base';
@@ -336,10 +323,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 }
                             });
 
-                            // Chain Shortcut if jump lands on it
                             if (piece.position === shortcut.start) {
                                 const flyPath = getShortcutPath(player.color);
-                                // Collision on flight path
                                 newPlayers.forEach((opp: Player) => {
                                     if (opp.id === player.id) return;
                                     const oppHomeCoords = getHomeCoordinates(opp.color);
@@ -361,7 +346,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 piece.position = shortcut.end;
                                 msg += " + SHORTCUT!";
                                 newPlayers.forEach((p: Player, pIdx: number) => {
-                                    if (pIdx !== currentPlayerIndex) {
+                                    if (pIdx !== gameStore.currentPlayerIndex) {
                                         p.pieces.forEach((enemy: Piece) => {
                                             if (enemy.state === 'active' && enemy.position === piece.position) {
                                                 enemy.state = 'base';
@@ -379,7 +364,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
         }
-        // 4. Home Stretch
         else if (piece.state === 'home') {
             const currentProgress = piece.position - 100;
             const target = currentProgress + diceValue;
@@ -401,10 +385,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
-        // Collision Check Final (Catch-all)
         if (piece.state === 'active') {
             newPlayers.forEach((p: Player, pIdx: number) => {
-                if (pIdx !== currentPlayerIndex) {
+                if (pIdx !== gameStore.currentPlayerIndex) {
                     p.pieces.forEach((enemy: Piece) => {
                         if (enemy.state === 'active' && enemy.position === piece.position) {
                             enemy.state = 'base';
@@ -418,59 +401,51 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const hasWon = player.pieces.every((p: Piece) => p.state === 'finished');
 
-        let nextTurnState: 'rolling' | 'moving' | 'resolving' | 'finished' = 'rolling';
-        let nextPlayerIndex = currentPlayerIndex;
-        let nextConsecutiveSixes = 0;
-        let nextMovedPieceIds: number[] = [];
-
         if (hasWon) {
-            nextTurnState = 'finished';
-            set({
-                players: newPlayers,
-                winner: player,
-                turnState: nextTurnState,
-                diceValue: null,
-                logs: [{ turn: get().logs.length + 1, text: msg, playerColor: player.color }, ...logs]
+            batch(() => {
+                setGameStore({
+                    players: newPlayers,
+                    winner: player,
+                    turnState: 'finished',
+                    diceValue: null,
+                    logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: player.color }, ...gameStore.logs]
+                });
             });
         } else {
             if (isSix) {
-                nextTurnState = 'rolling';
-                nextPlayerIndex = currentPlayerIndex;
-                nextConsecutiveSixes = consecutiveSixes;
-                nextMovedPieceIds = [...movedPieceIds, pieceId];
                 msg += " Bonus Roll!";
 
-                set({
-                    players: newPlayers,
-                    winner: null,
-                    turnState: nextTurnState,
-                    diceValue: null,
-                    currentPlayerIndex: nextPlayerIndex,
-                    consecutiveSixes: nextConsecutiveSixes,
-                    movedPieceIds: nextMovedPieceIds,
-                    // New Turn ID for the bonus roll
-                    turnId: Math.random().toString(36),
-                    logs: [{ turn: get().logs.length + 1, text: msg, playerColor: player.color }, ...logs]
+                batch(() => {
+                    setGameStore('players', newPlayers);
+                    setGameStore('winner', null);
+                    setGameStore('turnState', 'rolling');
+                    setGameStore('diceValue', null);
+                    setGameStore('movedPieceIds', [...gameStore.movedPieceIds, pieceId]);
+                    setGameStore('turnId', Math.random().toString(36));
+                    setGameStore('logs', [{ turn: gameStore.logs.length + 1, text: msg, playerColor: player.color }, ...gameStore.logs]);
                 });
             } else {
-                // End Turn with delay
-                nextPlayerIndex = (currentPlayerIndex + 1) % newPlayers.length;
+                const nextPlayerIndex = (gameStore.currentPlayerIndex + 1) % newPlayers.length;
 
-                set({
-                    players: newPlayers,
-                    diceValue: null,
-                    turnState: 'resolving',
-                    logs: [{ turn: get().logs.length + 1, text: msg, playerColor: player.color }, ...logs],
-                    highlightedPieceId: null
+                batch(() => {
+                    setGameStore({
+                        players: newPlayers,
+                        diceValue: null,
+                        turnState: 'resolving',
+                        logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: player.color }, ...gameStore.logs],
+                        highlightedPieceId: null
+                    });
                 });
 
                 setTimeout(() => {
-                    set({
-                        turnState: 'rolling',
-                        currentPlayerIndex: nextPlayerIndex,
-                        consecutiveSixes: 0,
-                        movedPieceIds: [],
-                        turnId: Math.random().toString(36) // Ready for next player
+                    batch(() => {
+                        setGameStore({
+                            turnState: 'rolling',
+                            currentPlayerIndex: nextPlayerIndex,
+                            consecutiveSixes: 0,
+                            movedPieceIds: [],
+                            turnId: Math.random().toString(36)
+                        });
                     });
                 }, 800);
             }
@@ -478,60 +453,68 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     skipTurn: () => {
-        const { players, currentPlayerIndex, diceValue, consecutiveSixes, logs } = get();
-
-        let nextPlayerIndex = currentPlayerIndex;
+        let nextPlayerIndex = gameStore.currentPlayerIndex;
         let nextConsecutiveSixes = 0;
         let nextMovedPieceIds: number[] = [];
         let msg = "Skipped.";
-        let logColor = players[currentPlayerIndex].color;
+        let logColor = gameStore.players[gameStore.currentPlayerIndex].color;
 
-        if (diceValue === 6) {
+        if (gameStore.diceValue === 6) {
             msg = "No moves, but rolled 6! Roll again.";
-            nextPlayerIndex = currentPlayerIndex;
-            nextConsecutiveSixes = consecutiveSixes;
-            nextMovedPieceIds = get().movedPieceIds;
+            nextPlayerIndex = gameStore.currentPlayerIndex;
+            nextConsecutiveSixes = gameStore.consecutiveSixes;
+            nextMovedPieceIds = gameStore.movedPieceIds;
 
-            set({
-                turnState: 'rolling',
-                diceValue: null,
-                currentPlayerIndex: nextPlayerIndex,
-                consecutiveSixes: nextConsecutiveSixes,
-                movedPieceIds: nextMovedPieceIds,
-                turnId: Math.random().toString(36),
-                logs: [{ turn: logs.length + 1, text: msg, playerColor: logColor }, ...logs]
+            batch(() => {
+                setGameStore({
+                    turnState: 'rolling',
+                    diceValue: null,
+                    currentPlayerIndex: nextPlayerIndex,
+                    consecutiveSixes: nextConsecutiveSixes,
+                    movedPieceIds: nextMovedPieceIds,
+                    turnId: Math.random().toString(36),
+                    logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: logColor }, ...gameStore.logs]
+                });
             });
         } else {
             msg = "Skipped.";
-            nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            nextPlayerIndex = (gameStore.currentPlayerIndex + 1) % gameStore.players.length;
 
-            set({
-                turnState: 'resolving',
-                diceValue: null,
-                logs: [{ turn: logs.length + 1, text: msg, playerColor: logColor }, ...logs]
+            batch(() => {
+                setGameStore({
+                    turnState: 'resolving',
+                    diceValue: null,
+                    logs: [{ turn: gameStore.logs.length + 1, text: msg, playerColor: logColor }, ...gameStore.logs]
+                });
             });
 
             setTimeout(() => {
-                set({
-                    turnState: 'rolling',
-                    currentPlayerIndex: nextPlayerIndex,
-                    consecutiveSixes: 0,
-                    movedPieceIds: [],
-                    turnId: Math.random().toString(36)
+                batch(() => {
+                    setGameStore({
+                        turnState: 'rolling',
+                        currentPlayerIndex: nextPlayerIndex,
+                        consecutiveSixes: 0,
+                        movedPieceIds: [],
+                        turnId: Math.random().toString(36)
+                    });
                 });
             }, 800);
         }
     },
 
-    resetGame: () => set({
-        gameStatus: 'setup',
-        winner: null,
-        players: [],
-        logs: [],
-        turnState: 'rolling',
-        currentPlayerIndex: 0,
-        consecutiveSixes: 0,
-        movedPieceIds: [],
-        turnId: ''
-    }),
-}));
+    resetGame: () => {
+        batch(() => {
+            setGameStore({
+                gameStatus: 'setup',
+                winner: null,
+                players: [],
+                logs: [],
+                turnState: 'rolling',
+                currentPlayerIndex: 0,
+                consecutiveSixes: 0,
+                movedPieceIds: [],
+                turnId: ''
+            });
+        });
+    },
+};
