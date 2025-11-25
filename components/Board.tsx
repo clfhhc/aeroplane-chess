@@ -220,7 +220,7 @@ const WinnerOverlay = () => {
     return (
       <Show when={winner()}>
         <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-3xl animate-in fade-in duration-500">
-            <div class={clsx("flex flex-col items-center p-8 sm:p-12 border-4 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)]", COLOR_MAP[winner()!.color].border, COLOR_MAP[winner()!.color].bg, "bg-opacity-20")}>
+            <div class={clsx("flex flex-col items-center p-8 sm:p-12 border-4 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)]", COLOR_MAP[winner()!.color].border, COLOR_MAP[winner()!.color].bg20)}>
                 <Trophy class={clsx("w-24 h-24 sm:w-32 sm:h-32 mb-6 animate-bounce", COLOR_MAP[winner()!.color].text)} />
                 <h2 class={clsx("text-4xl sm:text-6xl font-black uppercase tracking-tighter mb-2 text-center", COLOR_MAP[winner()!.color].text)}>
                     {winner()!.name} Wins!
