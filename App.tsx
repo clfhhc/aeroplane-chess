@@ -37,7 +37,7 @@ const App = () => {
         </Show>
         
         {/* Center Panel: Board */}
-        <div class="flex-1 flex items-center justify-center relative z-0 order-1 overflow-hidden p-2 md:p-6">
+        <div class="flex-1 flex items-start justify-center relative z-0 order-1 overflow-hidden p-2 md:p-6">
            <div class="absolute w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-blue-900/30 rounded-full blur-[60px] md:blur-[100px] pointer-events-none animate-pulse" />
            <Board />
         </div>

@@ -43,10 +43,10 @@ const Piece = (props: PieceProps) => {
 
       {/* Moveable Indicator (Large Bouncing Number) */}
       {props.moveableLabel && (
-        <div class="absolute inset-0 z-20 flex items-center justify-center animate-bounce pointer-events-none">
+        <div class="absolute inset-0 z-20 flex items-center justify-center animate-bounce pointer-events-none select-none">
              <span 
                 class={clsx(
-                    "text-3xl sm:text-4xl font-black text-white drop-shadow-lg"
+                    "text-3xl sm:text-4xl font-black text-white drop-shadow-lg select-none"
                 )}
                 style={{ 
                     "text-shadow": '0px 0px 4px rgba(0,0,0,0.8), 0px 0px 10px currentColor' 

@@ -39,7 +39,7 @@ const GridCell = (props: GridCellProps) => {
       isTrack = true;
       trackIndex = trackIdx;
       const c = TRACK_COORDS[trackIdx].color!;
-      cellColorClass = `${COLOR_MAP[c].bg} bg-opacity-20 border-${c}-500/40 border`;
+      cellColorClass = `${COLOR_MAP[c].bg20} border-${c}-500/40 border`;
     }
 
     [PlayerColor.YELLOW, PlayerColor.GREEN, PlayerColor.RED, PlayerColor.BLUE].forEach(c => {
@@ -47,7 +47,7 @@ const GridCell = (props: GridCellProps) => {
       for (let i=0; i<6; i++) {
           if (homePath[i].x === logicalX() && homePath[i].y === logicalY()) {
               homeColor = c;
-              cellColorClass = `${COLOR_MAP[c].bg} bg-opacity-60 border-${c}-500 border shadow-[0_0_10px_rgba(0,0,0,0.3)]`;
+              cellColorClass = `${COLOR_MAP[c].bg60} border-${c}-500 border shadow-[0_0_10px_rgba(0,0,0,0.3)]`;
           }
       }
     });
@@ -170,8 +170,8 @@ const Hangar = (props: HangarProps) => {
   return (
     <div 
        class={clsx(
-         "absolute rounded-2xl border-2 sm:border-4 bg-opacity-10 backdrop-blur-sm z-30 box-border", 
-         style().border, style().bg
+         "absolute rounded-2xl border-2 sm:border-4 backdrop-blur-sm z-30 box-border", 
+         style().border, style().bg10
        )}
        style={{ 
          top: `${dimensions().top}px`, 
@@ -249,7 +249,7 @@ const Board = () => {
         if (containerRef) {
             const width = containerRef.clientWidth;
             const height = containerRef.clientHeight;
-            const safeMargin = 40; 
+            const safeMargin = 80; // Increased margin to account for borders, padding, and rounding
             const availableSize = Math.min(width, height) - safeMargin;
             const size = Math.floor(Math.max(10, availableSize / boardSize));
             setCellSize(size);
@@ -271,10 +271,10 @@ const Board = () => {
   });
 
   return (
-    <div ref={containerRef} class="w-full h-full flex items-center justify-center overflow-hidden">
+    <div ref={containerRef} class="w-full h-full flex items-start justify-center pt-4 md:pt-8 p-4">
       <div 
         class="relative bg-slate-950/60 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-xl overflow-hidden transition-all duration-300"
-        style={{ width: `${fullSize()}px`, height: `${fullSize()}px` }}
+        style={{ width: `${fullSize() + 4}px`, height: `${fullSize() + 4}px` }}
       >
          <WinnerOverlay />
 

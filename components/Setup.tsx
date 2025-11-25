@@ -83,7 +83,7 @@ const Setup = () => {
                                        class={clsx(
                                            "aspect-square rounded-2xl flex items-center justify-center transition-all relative group",
                                            isSelected() 
-                                              ? clsx(style.bg, "bg-opacity-20 border-2", style.border, style.glow)
+                                              ? clsx(style.bg20, "border-2", style.border, style.glow)
                                               : "bg-slate-800/50 border-2 border-transparent grayscale hover:grayscale-0"
                                        )}
                                    >

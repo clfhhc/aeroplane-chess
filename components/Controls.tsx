@@ -34,7 +34,7 @@ const Controls = (props: ControlsProps) => {
 
         <div class={clsx(
             "hidden md:flex flex-1 p-6 rounded-xl border transition-all duration-500 flex-col justify-center",
-            styles().bg, "bg-opacity-10", styles().border, styles().glow
+            styles().bg10, styles().border, styles().glow
         )}>
             <span class="text-xs uppercase tracking-widest text-gray-400 block mb-1">Current Turn</span>
             <div class={clsx("text-4xl font-black truncate", styles().text)}>
@@ -51,7 +51,7 @@ const Controls = (props: ControlsProps) => {
       <div class="flex flex-row md:flex-col items-center gap-4 md:gap-8 flex-1">
         
         {/* Dice Container */}
-        <div class="relative flex items-center justify-center shrink-0 w-16 md:w-full">
+        <div class="relative flex items-center justify-center flex-1 md:w-full md:flex-none">
            <Show when={gameStore.diceValue}>
              <div class={clsx(
                "text-6xl md:text-8xl font-black drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-bounce",
@@ -66,14 +66,14 @@ const Controls = (props: ControlsProps) => {
         </div>
 
         {/* Controls Center Block */}
-        <div class="flex flex-col gap-2 w-full">
+        <div class="flex flex-col gap-2 flex-[2] md:flex-none md:w-full">
             <button
                 onClick={gameActions.rollDice}
                 disabled={!canRoll()}
                 class={clsx(
                     "w-full py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold uppercase tracking-wider shadow-lg transition-all active:scale-95",
                     canRoll() 
-                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:brightness-110 hover:shadow-purple-500/50"
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:brightness-110 hover:shadow-purple-500/50 cursor-pointer"
                     : "bg-slate-800 text-slate-500 cursor-not-allowed"
                 )}
             >
@@ -101,13 +101,13 @@ const Controls = (props: ControlsProps) => {
                                 onPointerLeave={() => gameActions.setHighlightedPiece(null)}
                                 disabled={!canMove()}
                                 class={clsx(
-                                    "aspect-square rounded-lg font-bold text-sm border transition-all touch-none relative group", 
+                                    "aspect-square rounded-lg font-bold text-sm border transition-all touch-none relative group select-none", 
                                     canMove() 
-                                        ? clsx(styles().bg, "text-white border-white/20 hover:brightness-110 active:scale-95") 
+                                        ? clsx(styles().bg, "text-white border-white/20 hover:brightness-110 active:scale-95 cursor-pointer") 
                                         : "bg-slate-800/50 text-gray-600 border-transparent cursor-not-allowed opacity-50"
                                 )}
                             >
-                                {idx + 1}
+                                <span class="pointer-events-none select-none">{idx + 1}</span>
                             </button>
                         )
                     }}
@@ -117,7 +117,7 @@ const Controls = (props: ControlsProps) => {
             <Show when={gameStore.turnState === 'moving' && !gameStore.diceValue}>
                  <button 
                     onClick={gameActions.skipTurn} 
-                    class="hidden md:flex bg-slate-800/50 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg py-2 items-center justify-center gap-2 text-xs"
+                    class="hidden md:flex bg-slate-800/50 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg py-2 items-center justify-center gap-2 text-xs cursor-pointer"
                 >
                     <SkipForward size={14} /> Skip
                 </button>
@@ -125,32 +125,32 @@ const Controls = (props: ControlsProps) => {
         </div>
 
         {/* Mobile: Log Button */}
-        <div class="md:hidden flex flex-col gap-2 shrink-0">
+        <div class="md:hidden flex flex-col items-center justify-center flex-1 gap-2">
              <button 
                 onClick={props.onToggleLog}
-                class="flex flex-col items-center justify-center text-gray-400 hover:text-white p-2"
+                class="flex flex-col items-center justify-center text-gray-400 hover:text-white p-2 cursor-pointer"
             >
                 <FileText size={24} />
                 <span class="text-[10px] mt-1">LOG</span>
             </button>
              <Show when={gameStore.turnState === 'moving' && !gameStore.diceValue}>
-                <button onClick={gameActions.skipTurn} class="text-gray-500 hover:text-white p-2">
+                <button onClick={gameActions.skipTurn} class="text-gray-500 hover:text-white p-2 cursor-pointer">
                      <SkipForward size={24} />
                 </button>
             </Show>
         </div>
       </div>
       
-      <div class="hidden md:flex xl:hidden mt-4">
+      <div class="hidden md:flex xl:hidden mt-4 gap-2">
          <button 
             onClick={props.onToggleLog}
-            class="w-full bg-slate-800/50 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg py-3 flex items-center justify-center gap-2"
+            class="w-full bg-slate-800/50 hover:bg-slate-800 text-gray-400 hover:text-white rounded-lg py-3 flex items-center justify-center gap-2 cursor-pointer"
          >
-            <FileText size={16} /> TOGGLE FLIGHT LOG
+            <FileText size={16} /> FLIGHT LOG
          </button>
       </div>
 
-      <div class="hidden md:grid grid-cols-2 gap-2 text-xs text-gray-500 border-t border-white/10 pt-4 mt-auto">
+      <div class="hidden md:grid grid-cols-2 gap-2 text-xs text-gray-500 border-t border-white/10 pt-4 mt-4 select-none">
          <div>Roll 6 to Launch</div>
          <div>Land on color to Jump</div>
       </div>
